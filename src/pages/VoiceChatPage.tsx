@@ -24,7 +24,7 @@ const VoiceChatPage = () => {
     
     // Add welcome message to history
     setMessages([{ 
-      role: 'assistant', 
+      role: 'assistant' as const, 
       content: welcomeMessage 
     }]);
     
@@ -99,7 +99,7 @@ const VoiceChatPage = () => {
     // Add user message to history
     const updatedMessages = [
       ...messages,
-      { role: 'user', content: userMessage }
+      { role: 'user' as const, content: userMessage }
     ];
     
     setMessages(updatedMessages);
@@ -112,7 +112,7 @@ const VoiceChatPage = () => {
       // Add assistant response to history
       setMessages([
         ...updatedMessages,
-        { role: 'assistant', content: response }
+        { role: 'assistant' as const, content: response }
       ]);
       
       // Speak the response

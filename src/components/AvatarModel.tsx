@@ -39,7 +39,9 @@ const AvatarModel: React.FC<AvatarModelProps> = ({ className }) => {
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.outputEncoding = THREE.sRGBEncoding;
+    
+    // In newer versions of Three.js, outputEncoding was replaced with outputColorSpace
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     
     // Clear any existing canvas
     containerRef.current.innerHTML = '';
