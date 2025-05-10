@@ -164,8 +164,15 @@ const ChatPage = () => {
               <Send className="h-4 w-4" />
             </Button>
           </div>
-          <div className="text-xs text-mindful-500 mt-2 text-center">
-            MindfulAI is not a replacement for professional mental health support. In crisis, please contact emergency services.
+          <div className="flex justify-between items-center mt-4">
+            <div className="text-xs text-mindful-500">
+              MindfulAI is not a replacement for professional mental health support.
+            </div>
+            <Link to="/voice-chat">
+              <Button variant="outline" className="text-soothing-600 border-soothing-300 hover:bg-soothing-50">
+                Need someone to talk to?
+              </Button>
+            </Link>
           </div>
         </form>
       </div>
