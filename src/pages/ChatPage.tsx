@@ -1,181 +1,172 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Brain, Send, ArrowLeft } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
-import { sendMessageToOpenAI } from '@/utils/openai';
-import { ChatMessage, OpenAIMessage } from '@/types/chat';
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { nanoid } from 'nanoid';
+import { sendMessageToOpenAI } from '@/utils/openai';
+import { ArrowLeft, Send, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ChatMessage, OpenAIMessage } from '@/types/chat';
+import { useToast } from '@/hooks/use-toast';
 
-const ChatPage = () => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: nanoid(),
-      role: "assistant",
-      content: "Hi, I'm MindfulAI. I'm here to provide support and evidence-based coping strategies. How are you feeling today?",
-      timestamp: new Date()
-    }
-  ]);
-  const [inputMessage, setInputMessage] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
+const ChatPage: React.FC = () => {
+  const [inputValue, setInputValue] = useState<string>('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
-  // Scroll to bottom whenever messages change
+  // Auto scroll to bottom of messages
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputMessage.trim() || isProcessing) return;
+    if (!inputValue.trim() || isLoading) return;
 
-    const userMessage: ChatMessage = {
+    const userMessage = {
       id: nanoid(),
-      role: "user",
-      content: inputMessage,
-      timestamp: new Date()
+      role: 'user' as const,
+      content: inputValue,
+      timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    setInputMessage("");
-    setIsProcessing(true);
+    setMessages((prev) => [...prev, userMessage]);
+    setInputValue('');
+    setIsLoading(true);
 
     try {
-      // Prepare messages for OpenAI API (exclude system message as we add it in the API call)
-      const openaiMessages: OpenAIMessage[] = messages
-        .filter(msg => msg.role === "user" || msg.role === "assistant")
-        .map(msg => ({
-          role: msg.role,
-          content: msg.content
-        }));
+      // Format messages for API
+      const apiMessages: OpenAIMessage[] = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
 
       // Add the new user message
-      openaiMessages.push({ role: "user", content: userMessage.content });
+      apiMessages.push({
+        role: 'user',
+        content: userMessage.content
+      });
 
-      // Get response from OpenAI
-      const response = await sendMessageToOpenAI(openaiMessages);
+      const response = await sendMessageToOpenAI(apiMessages);
 
-      // Add assistant response
-      setMessages(prev => [...prev, {
+      const assistantMessage = {
         id: nanoid(),
-        role: "assistant",
+        role: 'assistant' as const,
         content: response,
-        timestamp: new Date()
-      }]);
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
-      console.error("Error in chat:", error);
+      console.error('Error sending message:', error);
       toast({
         title: "Error",
         description: "Failed to get a response. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
-      setIsProcessing(false);
+      setIsLoading(false);
     }
   };
 
+  const resetChat = () => {
+    setMessages([]);
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-mindful-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm py-4 px-6 flex items-center gap-4">
+    <div className="flex flex-col h-screen">
+      <header className="bg-white shadow-sm py-4 px-6 flex justify-between items-center">
         <Link to="/" className="text-mindful-600 hover:text-mindful-800 transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <div className="flex items-center gap-2">
-          <Avatar className="h-8 w-8 bg-soothing-100">
-            <AvatarImage src="" />
-            <AvatarFallback className="bg-soothing-100 text-soothing-600">
-              <Brain className="h-5 w-5" />
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <h1 className="font-semibold text-mindful-800">MindfulAI Chat</h1>
-          </div>
-        </div>
+        <h1 className="font-semibold text-lg text-mindful-800">Chat with MindfulAI</h1>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={resetChat}
+          disabled={isLoading || messages.length === 0}
+        >
+          <RefreshCw className="h-5 w-5" />
+        </Button>
       </header>
 
-      {/* Chat Messages */}
-      <div className="flex-grow overflow-y-auto p-4 pb-6">
-        <div className="max-w-3xl mx-auto space-y-6">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-            >
+      <div className="flex-grow bg-gray-50 overflow-y-auto p-4">
+        <div className="max-w-3xl mx-auto space-y-4">
+          {messages.length === 0 ? (
+            <div className="text-center py-12">
+              <h2 className="text-xl font-medium text-gray-700 mb-2">Welcome to MindfulAI</h2>
+              <p className="text-gray-500 mb-6">
+                I'm here to provide emotional support and practical guidance for your mental wellbeing.
+              </p>
+              <Button 
+                variant="secondary" 
+                className="mx-auto" 
+                onClick={() => navigate("/voice-chat")}
+              >
+                Need someone to talk to?
+              </Button>
+            </div>
+          ) : (
+            messages.map((msg) => (
               <div
-                className={`max-w-[80%] rounded-xl p-4 ${
-                  message.role === "user"
-                    ? "bg-soothing-600 text-white"
-                    : "bg-white border border-mindful-100"
+                key={msg.id}
+                className={`p-4 rounded-lg max-w-[85%] ${
+                  msg.role === 'user'
+                    ? 'ml-auto bg-mindful-100 text-mindful-900'
+                    : 'bg-white text-gray-700 shadow-sm'
                 }`}
               >
-                {message.role === "assistant" && (
-                  <div className="flex items-center gap-2 mb-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="bg-soothing-100 text-soothing-600">
-                        <Brain className="h-3 w-3" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs font-medium text-mindful-600">MindfulAI</span>
-                  </div>
-                )}
-                <div className="whitespace-pre-wrap text-sm">{message.content}</div>
-                <div className="mt-1 text-xs opacity-60 text-right">
-                  {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
+                {msg.content}
               </div>
-            </div>
-          ))}
+            ))
+          )}
           <div ref={messagesEndRef} />
         </div>
       </div>
 
-      {/* Input Area */}
-      <div className="border-t bg-white p-4">
-        <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto">
-          <div className="flex gap-2">
-            <Textarea
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="Type your message here..."
-              className="flex-grow resize-none min-h-[50px] max-h-[150px] py-3"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage(e);
-                }
-              }}
-              disabled={isProcessing}
-            />
-            <Button 
-              type="submit" 
-              className="self-end"
-              disabled={isProcessing || !inputMessage.trim()}
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="flex justify-between items-center mt-4">
-            <div className="text-xs text-mindful-500">
-              MindfulAI is not a replacement for professional mental health support.
-            </div>
-            <Link to="/voice-chat">
-              <Button variant="outline" className="text-soothing-600 border-soothing-300 hover:bg-soothing-50">
-                Need someone to talk to?
-              </Button>
-            </Link>
-          </div>
-        </form>
-      </div>
+      {messages.length > 0 && (
+        <div className="mt-4 bg-white flex justify-center">
+          <Button 
+            variant="outline" 
+            className="mb-4" 
+            onClick={() => navigate("/voice-chat")}
+          >
+            Need someone to talk to?
+          </Button>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="p-4 bg-white border-t">
+        <div className="flex max-w-3xl mx-auto">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={handleInputChange}
+            placeholder="Type your message..."
+            className="flex-grow p-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-1 focus:ring-mindful-500"
+            disabled={isLoading}
+          />
+          <button
+            type="submit"
+            className={`px-4 py-2 rounded-r-md bg-mindful-600 text-white ${
+              isLoading ? 'opacity-70' : 'hover:bg-mindful-700'
+            }`}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <RefreshCw className="h-5 w-5 animate-spin" />
+            ) : (
+              <Send className="h-5 w-5" />
+            )}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

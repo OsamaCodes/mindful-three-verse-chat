@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Mic, MicOff } from "lucide-react";
-import { setupSpeechRecognition, speakText, sendVoiceMessageToOpenAI } from '@/utils/voiceChat';
+import { setupSpeechRecognition, speakText, sendVoiceMessageToOpenAI, preloadVoices } from '@/utils/voiceChat';
 import AvatarModel from '@/components/AvatarModel';
 import { OpenAIMessage } from '@/types/chat';
 import { useToast } from '@/hooks/use-toast';
@@ -20,53 +20,59 @@ const VoiceChatPage = () => {
   
   // Initialize conversation
   useEffect(() => {
-    const welcomeMessage = "Hi there! I'm Emma, your virtual companion. How are you feeling today? I'm here to listen and talk with you.";
-    
-    // Add welcome message to history
-    setMessages([{ 
-      role: 'assistant' as const, 
-      content: welcomeMessage 
-    }]);
-    
-    // Speak the welcome message
-    setIsSpeaking(true);
-    speakText(welcomeMessage).then(() => {
+    const initializeVoiceChat = async () => {
+      // Preload voices to ensure they're ready
+      await preloadVoices();
+      
+      const welcomeMessage = "Hi there! I'm Emma, your virtual companion. How are you feeling today? I'm here to listen and talk with you.";
+      
+      // Add welcome message to history
+      setMessages([{ 
+        role: 'assistant' as const, 
+        content: welcomeMessage 
+      }]);
+      
+      // Speak the welcome message
+      setIsSpeaking(true);
+      await speakText(welcomeMessage);
       setIsSpeaking(false);
-    });
-    
-    // Initialize speech recognition
-    recognitionRef.current = setupSpeechRecognition();
-    
-    if (!recognitionRef.current) {
-      toast({
-        title: "Speech Recognition Not Supported",
-        description: "Your browser doesn't support voice recognition. Please try Chrome or Edge.",
-        variant: "destructive"
-      });
-    } else {
-      // Set up recognition event handlers
-      recognitionRef.current.onresult = (event: any) => {
-        const current = event.resultIndex;
-        const result = event.results[current];
-        const transcriptText = result[0].transcript;
-        setTranscript(transcriptText);
-      };
       
-      recognitionRef.current.onend = () => {
-        if (isListening) {
-          const finalTranscript = transcript;
-          if (finalTranscript && !isProcessing) {
-            handleSendMessage(finalTranscript);
+      // Initialize speech recognition
+      recognitionRef.current = setupSpeechRecognition();
+      
+      if (!recognitionRef.current) {
+        toast({
+          title: "Speech Recognition Not Supported",
+          description: "Your browser doesn't support voice recognition. Please try Chrome or Edge.",
+          variant: "destructive"
+        });
+      } else {
+        // Set up recognition event handlers
+        recognitionRef.current.onresult = (event: any) => {
+          const current = event.resultIndex;
+          const result = event.results[current];
+          const transcriptText = result[0].transcript;
+          setTranscript(transcriptText);
+        };
+        
+        recognitionRef.current.onend = () => {
+          if (isListening) {
+            const finalTranscript = transcript;
+            if (finalTranscript && !isProcessing) {
+              handleSendMessage(finalTranscript);
+            }
+            setIsListening(false);
           }
-          setIsListening(false);
-        }
-      };
-      
-      // Start listening automatically after welcome message
-      setTimeout(() => {
-        toggleListening();
-      }, 5000);
-    }
+        };
+        
+        // Start listening automatically after welcome message
+        setTimeout(() => {
+          toggleListening();
+        }, 1500);
+      }
+    };
+    
+    initializeVoiceChat();
     
     return () => {
       if (recognitionRef.current) {
@@ -159,7 +165,7 @@ const VoiceChatPage = () => {
       
       {/* Avatar Area */}
       <div className="flex-grow">
-        <AvatarModel className="h-full" />
+        <AvatarModel className="h-full" isSpeaking={isSpeaking} />
       </div>
       
       {/* Voice Status Area */}

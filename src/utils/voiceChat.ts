@@ -21,6 +21,9 @@ const setupSpeechRecognition = () => {
 const speakText = (text: string) => {
   return new Promise<void>((resolve) => {
     if ('speechSynthesis' in window) {
+      // Cancel any ongoing speech first
+      window.speechSynthesis.cancel();
+      
       const utterance = new SpeechSynthesisUtterance(text);
       
       // Try to find a female voice
@@ -36,7 +39,7 @@ const speakText = (text: string) => {
       }
       
       utterance.rate = 1.0;
-      utterance.pitch = 1.0;
+      utterance.pitch = 1.1;
       utterance.onend = () => resolve();
       
       window.speechSynthesis.speak(utterance);
@@ -54,14 +57,36 @@ const sendVoiceMessageToOpenAI = async (
 ): Promise<string> => {
   const response = await sendMessageToOpenAI([
     ...chatHistory,
-    { role: 'user', content: message }
+    { role: 'user' as const, content: message }
   ]);
   
   return response;
 };
 
+// Make sure voices are loaded
+const loadVoices = () => {
+  return new Promise<SpeechSynthesisVoice[]>((resolve) => {
+    if (speechSynthesis.getVoices().length) {
+      resolve(speechSynthesis.getVoices());
+    } else {
+      speechSynthesis.onvoiceschanged = () => {
+        resolve(speechSynthesis.getVoices());
+      };
+    }
+  });
+};
+
+// Preload voices
+const preloadVoices = async () => {
+  if ('speechSynthesis' in window) {
+    await loadVoices();
+  }
+};
+
 export {
   setupSpeechRecognition,
   speakText,
-  sendVoiceMessageToOpenAI
+  sendVoiceMessageToOpenAI,
+  preloadVoices
 };
+

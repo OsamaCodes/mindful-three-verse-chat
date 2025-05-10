@@ -1,14 +1,21 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 interface AvatarModelProps {
   className?: string;
+  isSpeaking?: boolean;
 }
 
-const AvatarModel: React.FC<AvatarModelProps> = ({ className }) => {
+const AvatarModel: React.FC<AvatarModelProps> = ({ className, isSpeaking = false }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const mixerRef = useRef<THREE.AnimationMixer | null>(null);
+  const modelRef = useRef<THREE.Group | null>(null);
+  const animationsRef = useRef<THREE.AnimationClip[]>([]);
+  const actionRef = useRef<THREE.AnimationAction | null>(null);
+  const talkingActionRef = useRef<THREE.AnimationAction | null>(null);
   
   useEffect(() => {
     if (!containerRef.current) return;
@@ -49,37 +56,47 @@ const AvatarModel: React.FC<AvatarModelProps> = ({ className }) => {
 
     // Initialize GLTF loader
     const loader = new GLTFLoader();
-    let mixer: THREE.AnimationMixer;
-    let model: THREE.Group;
 
     // Load the avatar model
     // Using a free readyplayer.me female avatar URL
     loader.load(
       'https://models.readyplayer.me/65cde7c08c1b50b9be8c45ab.glb',
       (gltf) => {
-        model = gltf.scene;
-        scene.add(model);
+        modelRef.current = gltf.scene;
+        scene.add(modelRef.current);
         
         // Center the model
-        const box = new THREE.Box3().setFromObject(model);
+        const box = new THREE.Box3().setFromObject(modelRef.current);
         const center = box.getCenter(new THREE.Vector3());
-        model.position.x = -center.x;
-        model.position.y = -center.y;
-        model.position.z = -center.z;
+        modelRef.current.position.x = -center.x;
+        modelRef.current.position.y = -center.y;
+        modelRef.current.position.z = -center.z;
         
         // Setup animation
-        mixer = new THREE.AnimationMixer(model);
-        if (gltf.animations.length) {
-          const idleAnimation = THREE.AnimationClip.findByName(gltf.animations, 'Idle');
-          if (idleAnimation) {
-            const action = mixer.clipAction(idleAnimation);
-            action.play();
-          } else {
-            // If no idle animation, play the first animation
-            const action = mixer.clipAction(gltf.animations[0]);
-            action.play();
-          }
+        mixerRef.current = new THREE.AnimationMixer(modelRef.current);
+        animationsRef.current = gltf.animations;
+        
+        // Set up default idle animation
+        const idleAnimation = THREE.AnimationClip.findByName(gltf.animations, 'Idle');
+        if (idleAnimation) {
+          actionRef.current = mixerRef.current.clipAction(idleAnimation);
+          actionRef.current.play();
+        } else if (gltf.animations.length) {
+          // If no idle animation, play the first animation
+          actionRef.current = mixerRef.current.clipAction(gltf.animations[0]);
+          actionRef.current.play();
         }
+        
+        // Find a talking animation if available 
+        const talkingAnimation = THREE.AnimationClip.findByName(gltf.animations, 'Talking') || 
+                                THREE.AnimationClip.findByName(gltf.animations, 'Talk') ||
+                                THREE.AnimationClip.findByName(gltf.animations, 'Speaking');
+        
+        if (talkingAnimation) {
+          talkingActionRef.current = mixerRef.current.clipAction(talkingAnimation);
+        }
+        
+        setIsLoaded(true);
       },
       (xhr) => {
         console.log(`${(xhr.loaded / xhr.total) * 100}% loaded`);
@@ -96,7 +113,7 @@ const AvatarModel: React.FC<AvatarModelProps> = ({ className }) => {
       requestAnimationFrame(animate);
       
       const delta = clock.getDelta();
-      if (mixer) mixer.update(delta);
+      if (mixerRef.current) mixerRef.current.update(delta);
       
       renderer.render(scene, camera);
     };
@@ -139,6 +156,23 @@ const AvatarModel: React.FC<AvatarModelProps> = ({ className }) => {
       renderer.dispose();
     };
   }, []);
+  
+  // Handle switching between idle and talking animations based on isSpeaking prop
+  useEffect(() => {
+    if (!isLoaded || !mixerRef.current) return;
+    
+    if (isSpeaking && talkingActionRef.current) {
+      if (actionRef.current) {
+        actionRef.current.fadeOut(0.5);
+      }
+      talkingActionRef.current.reset().fadeIn(0.5).play();
+    } else if (!isSpeaking && actionRef.current) {
+      if (talkingActionRef.current) {
+        talkingActionRef.current.fadeOut(0.5);
+      }
+      actionRef.current.reset().fadeIn(0.5).play();
+    }
+  }, [isSpeaking, isLoaded]);
   
   return <div ref={containerRef} className={`w-full h-full ${className}`} />;
 };
