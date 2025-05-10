@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Brain, Activity, Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -41,9 +42,11 @@ const Navbar = () => {
 
         {/* CTA Button (Desktop) */}
         <div className="hidden lg:block">
-          <Button className="btn-primary">
-            <Activity className="h-4 w-4 mr-1" />
-            Start Chatting
+          <Button className="btn-primary" asChild>
+            <Link to="/chat">
+              <Activity className="h-4 w-4 mr-1" />
+              Start Chatting
+            </Link>
           </Button>
         </div>
       </div>
@@ -56,9 +59,11 @@ const Navbar = () => {
             <a href="#how-it-works" className="text-mindful-800 py-2 hover:text-soothing-600 transition-colors" onClick={() => setIsMenuOpen(false)}>How It Works</a>
             <a href="#privacy" className="text-mindful-800 py-2 hover:text-soothing-600 transition-colors" onClick={() => setIsMenuOpen(false)}>Privacy</a>
             <a href="#faq" className="text-mindful-800 py-2 hover:text-soothing-600 transition-colors" onClick={() => setIsMenuOpen(false)}>FAQ</a>
-            <Button className="btn-primary w-full justify-center mt-4">
-              <Activity className="h-4 w-4 mr-1" />
-              Start Chatting
+            <Button className="btn-primary w-full justify-center mt-4" asChild>
+              <Link to="/chat" onClick={() => setIsMenuOpen(false)}>
+                <Activity className="h-4 w-4 mr-1" />
+                Start Chatting
+              </Link>
             </Button>
           </nav>
         </div>

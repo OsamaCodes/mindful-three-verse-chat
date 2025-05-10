@@ -8,6 +8,7 @@ import TestimonialCard from '@/components/TestimonialCard';
 import ChatDemoWindow from '@/components/ChatDemoWindow';
 import FAQ from '@/components/FAQ';
 import { Brain, Shield, MessageSquareText, Clock, HeartHandshake, PanelRight, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Index = () => {
   return (
@@ -27,9 +28,11 @@ const Index = () => {
               A supportive AI companion trained on specialized mental health data to provide evidence-based coping strategies and emotional support when you need it most.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button className="btn-primary">
-                Start Chatting Now
-                <ChevronRight className="h-5 w-5 ml-1" />
+              <Button className="btn-primary" asChild>
+                <Link to="/chat">
+                  Start Chatting Now
+                  <ChevronRight className="h-5 w-5 ml-1" />
+                </Link>
               </Button>
               <Button variant="outline" className="btn-secondary">
                 Learn More
@@ -268,8 +271,10 @@ const Index = () => {
           <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
             Take the first step towards better mental well-being with a supportive AI companion available whenever you need it.
           </p>
-          <Button className="bg-white text-soothing-600 hover:bg-white/90 py-3 px-8 rounded-full font-medium text-lg transition-all duration-300">
-            Start Chatting Now
+          <Button className="bg-white text-soothing-600 hover:bg-white/90 py-3 px-8 rounded-full font-medium text-lg transition-all duration-300" asChild>
+            <Link to="/chat">
+              Start Chatting Now
+            </Link>
           </Button>
           <p className="mt-6 text-white/70 text-sm">
             Remember: MindfulAI is a supplement to, not a replacement for, professional mental health care.
